@@ -1,5 +1,4 @@
 # Python-S.I.Pract04
-Adjunta en el README
 
 
 Seguridad Informática - Simulación de una doble decodificación (decodificación lineal + decodificación de la fuente) 
