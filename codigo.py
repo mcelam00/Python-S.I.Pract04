@@ -95,7 +95,7 @@ def procesarFuenteInformacion(fuenteInformacion):
 
 def leerDatoEntrada(nombre_archivo):
     lista = []
-    
+    c = ""
     
     
     with open(nombre_archivo, 'r', encoding='utf8') as f: #open abre el archivo; r en modo lectura; f el descriptor de fichero; importante decirle que es utf8 el fichero que sino no carga las ñ ni ´´
@@ -104,13 +104,24 @@ def leerDatoEntrada(nombre_archivo):
 
 
         while linea: #mientras que siga habiendo líneas
-            #Cojo caracter a caracter de la línea
+            #Cojo caracter a caracter de la línea. 
             for caracter in linea:
+                               
+                #if caracter == '\n'or caracter == ',' or caracter == ' ': #los \n los ignoramos, como si no estuvieran y las comas y espacios que los separan también
+                if caracter == '\n':
+                  continue
                 
-                if caracter == '\n'or caracter == ',' or caracter == ' ': #los \n los ignoramos, como si no estuvieran y las comas y espacios que los separan también
-                   continue
+                                 
+                if caracter == ',' or caracter == ' ': #Al llegar a una , salvo el caracter (puede haber caracteres dobles o triples dependiendo de si no es binario sino mod 10 pej)
+                    lista.append(c)
+                    c = "" #reseteamos c
+                #si caracter aun no es , seguimos guardando en c porque aún no acabó el numero a leer
+                else:
+                    c = c + caracter
 
-                lista.append(caracter)
+                
+
+                
         
             linea = f.readline()
 
@@ -118,21 +129,19 @@ def leerDatoEntrada(nombre_archivo):
 
     return lista
 
-def decodLineal(identidad, secuencias, filas, columnas):
-    secDecodific = ""
+def decodLineal(identidad, secuencias, filas, columnas): #NO PODEMOS DEVOLVER 1 STRING PORQUE PUEDE HABER NUMEROS QUE SEAN DE 2 O MAS SI APPENDEO COMO STRING SE PIERDE QUE ES UN NUM DE 2 POS
+    secDecodific = []
     #Si la identidad esta a la izda en la Generadora me quedo con el numero de posiciones que indiquen las filas desde la izda
     if identidad == "I":
-        for secuencia in secuencias: #cada pos del vector secuencias
-            print(secuencia)
+        for secuencia in secuencias: #cada pos del vector secuencias (cada trocito de long columnas)
+            #print(secuencia)
             for i in range(filas):
-                secDecodific = secDecodific + secuencia[i] #i para cada caracter dentro de cada secuencia codificada linealmente desde el 0
-
-
+                secDecodific.append(secuencia[i]) #i para cada caracter dentro de cada secuencia codificada linealmente desde el 0
     else:    
     #Si no, desde la derecha
           for secuencia in secuencias: #cada pos del vector secuencias
             for i in range(filas, columnas):
-                secDecodific = secDecodific + secuencia[i]#i para cada caracter dentro de cada secuencia codificada linealmente desde la segunda mitad
+                secDecodific.append(secuencia[i]) #i para cada caracter dentro de cada secuencia codificada linealmente desde la segunda mitad
 
     return secDecodific
 
@@ -141,18 +150,37 @@ def decodFuente(secuencia, alfabeto, base):
     caracter = ''
 
     #  Convertir cada bloque de binario al entero decimal (en éste caso)
-    entero = int(secuencia, base) #convierto la secuencia en string a un numero en la base que hayamos metido, si es 2 binario a decimal, si es 3 ternario a decimal
-    print(entero)
+    #entero = int(secuencia, base) #convierto la secuencia en string a un numero en la base que hayamos metido, si es 2 binario a decimal, si es 3 ternario a decimal
+    #print(entero)
+    print ("Sec original long r =", secuencia) #secuencia, es un array de long r, y tengo que transformarlo en un entero decimal (no módulo base)
+    
+    entero = 0
+    exponente = 0
+    pos = len(secuencia)-1 #dentro de esas r veces empiezo a coger por el final y voy bajando (derch a izda)
 
+    for num in secuencia: #recorre las posiciones (r veces)
+        
+        entero = entero + (int(secuencia[pos])*(base**exponente)) 
+        exponente = exponente+1
+        pos = pos-1
+    
+   
     # Calculo la posicion en el alfabeto para el entero anterior
     posicion = entero + 1
 
     # Busco en el alfabeto la posicion teniendo en cuenta que tal como está almacenado el índice es la posición obtenida anterior-1
-    print(alfabeto[posicion-1])
+    print("Símbolo final asociado = ", alfabeto[posicion-1])
 
     caracter = alfabeto[posicion-1]
 
     return caracter
+
+
+def convertirAArrayDeStrings(lista):
+    arrayDeStrings = []
+    for num in lista:
+        arrayDeStrings.append(str(num))
+    return arrayDeStrings
 
 
 ##FUNCIONES P4------------------------------------
@@ -173,70 +201,59 @@ def esPesoMenorIgualCapCorrectora(secuencia, CapCorrec):
     else:
         return False
 
-def algoritmoLider(secuencia, tableroIncompleto, base, H):
+def algoritmoLider(secuencia, sindromes, erroresPatron, base, H):
 
     #1. Calculo el síndrome de la palabra a corregir
-    #print(secuencia)
+   
     array = []
     for posicion in secuencia:
         array.append(int(posicion)) ##CUIDADO PORQUE LA SECUENCIA ES UN STRING (LO LEI DEL FICHERO COMO TAL); HAY SEPARAR 1 A 1 LAS POSICIONES Y CASTEARLAS A ENTERO
-    
-    array = np.array(array) #transforma el array de tamaño 1-> 110100010100110 en [110100010100110]
-    #print(array)
-    palabraTraspuesta = np.reshape(array, (len(array), 1))
-    #print(palabraTraspuesta)
+  
+
+    #array = np.array(array) #transforma el array de tamaño 1-> 110100010100110 en [110100010100110]
+   
+    palabraTraspuesta = np.reshape(array, (len(array), 1)) #traspongo la palabra para poder multiplicar
+   
     sindromePalabra = (H.dot(palabraTraspuesta))%base
-    #print(sindromePalabra)
+   
     
-    #2. Con ese síndrome voy al tablero incompleto y saco el error patron asociado  (que es hacer una búsqueda en el tablero (diccionario para nosotros))
+    #2. Con ese síndrome voy al tablero incompleto y saco el error patron asociado  (que es hacer una búsqueda en el tablero)
     print(sindromePalabra) 
         #como el sindrome está exactamente en el mismo formato que los del tablero incompleto me facilita muchisimo su busqueda
 
     
     #pintar todas las claves del diccionario
     print("================= BUSCANDO EN EL TABLERO INCOMPLETO ========================")
-    for errorPatron, sindromeAsociado in tableroIncompleto.items():
-        if(np.array_equal(sindromeAsociado, sindromePalabra) == True): #compara dos numpy arrays para ver si son iguales
-            errorPatronCorresp = errorPatron
-            print("ENCONTRADO\n")
+    
+    indice = 0
+
+    for sindrome in sindromes:
+        if ((sindrome == sindromePalabra).all() == True): #all compara termino a termino de los dos arrays que sean iguales
             break
+        indice = indice + 1
+    
+    #encuentra el sindrome correctamente
+
+    errorPatronCorresp = erroresPatron[indice]
+    
+    print("PALABRA CON RUIDO ",array)
+    print("ERROR PATRON ",errorPatronCorresp)
+    
        
-    #3. Restamos la palabra a corregir (que viene en string) del error patron sacado (tambien en string) y por supuesto, EN EL MODULO INDICADO A OPERAR (el resultado de dicha resta)
-    errorArray = []
-
-    print("ERROR PATRON =", errorPatronCorresp) #es un string
+    #3. Restamos la palabra a corregir del error patron sacado, EN EL MODULO INDICADO A OPERAR (el resultado de dicha resta)
     
-    errorPatronCorresp = errorPatronCorresp.split(',')
+    palabraCodigoCorregida = (np.subtract(array, errorPatronCorresp))%base
+    print(palabraCodigoCorregida)
 
-    for pos in errorPatronCorresp:
-        
-        if pos.find("(") != -1 or pos.find(")") != -1: #ha encontrado uno u otro, hay que quitarlos y castear a entero en el nuevo array
-            
-            if pos.find("(") != -1:
-                pos = pos.replace("(", "")
-                errorArray.append(int(pos))
+    devolver = []
 
-            if pos.find(")") != -1:
-                pos = pos.replace(")", "")
-                errorArray.append(int(pos))
-
-        else:
-            #Es una posicion sin nada mas que numero y la casteo solamente
-            errorArray.append(int(pos)) 
-
-    errorArray = np.array(errorArray) #transforma el array a un array numpy para que esté igual que el otro y poder restarlos
-    #print(array)
-    #print(errorArray)
-    palabraCodigoCorregida = (np.subtract(array, errorArray))%base
-    #print(palabraCodigoCorregida)
-
-    sinRuido = "" #paso el resultado a String para que me cuadre con la entrada de la P3
-    
     for i in palabraCodigoCorregida:
-        sinRuido = sinRuido + str(i)
+        devolver.append(str(i)) #preparo el formato para la entrada de la practica 3
 
-    #print(sinRuido)
-    return sinRuido
+    #print(devolver)
+   
+
+    return devolver
 
 
 
@@ -262,6 +279,7 @@ if identidad != 'D' and identidad != 'I':
 
 
 
+
     #1. Cargar Alfabeto 
 
 #ENTRADA TAL CUAL DEL ARCHIVO
@@ -273,8 +291,8 @@ print("Tam Alf = ", sum(fuenteInformacion.values()))
 alfabeto = procesarFuenteInformacion(fuenteInformacion) #de la fuente de informacion nos quedamos solo con el alfabeto en una lista
 
 print("Alfabeto = ", alfabeto)
-print("Tamaño Alf(bis) = ", len(alfabeto))
-m = len(alfabeto)
+print("Tamaño = ", len(alfabeto))
+m = len(alfabeto) #Numero de símbolos del alfabeto
 m = int(m)
 
 #ENTRADA MANUAL
@@ -283,31 +301,41 @@ m = int(m)
 #print(alfabeto)
 
 
-    # Leer dato entrada (lista L)
+    # Leer dato entrada (lista L) OJO, NECESARIA COMA FINAL PARA QUE GUARDE EL ÚLTIMO
 
-lista = leerDatoEntrada('/Users/mario/Desktop/Segundo Cuatrimestre/Seguridad Informática/Prácticas/Practica_4_SI/Resolución/Dato.txt')
+#lista = leerDatoEntrada('/Users/mario/Desktop/Segundo Cuatrimestre/Seguridad Informática/Prácticas/Practica_3_SI/Resolución/Dato.txt')
 #print("Lista Entrada", lista)
 
 
-    # Calculo el tamaño de la lista y lo divido por el número de columnas de la generadora
+
+    #ENTRADA DATO MANUAL (MAS CÓMODO):
+lista = [5,1,1,5,2,6,4,0,0,1,3,5,4,1,5,5,6,0,6,5,3,0,3,6,6,2,4,3,6,2,0,6,3,0,3,6,1,4,0,1,3,5,6,1,5,2,4,6,5,4,3,0,3,6,4,6,0,3,2,1,1,3,0,3,2,1,1,5,3,4,1,5,3,5,5,2,4,6,6,3,5,5,6,0,1,0,3,0,3,6,0,3,0,1,3,5,1,4,1,5,2,6]
+lista = convertirAArrayDeStrings(lista)
+print("Dato Entrada = ")
+print(lista)
+
+
+
+
+    # Calculo el tamaño de la lista (longitud del mjs codificado) y lo divido por el número de columnas de la generadora
 tam = len(lista)
 print("Tam Dato Entrada = ", tam)
 
 cociente = tam // columnas
 resto = tam % columnas
 
-print("COCIENTE para las secuencias que son las palabras codigo lineal pero con ruido = ", cociente) #luego hasta que no les quitemos el ruido no perteneceran al cod lineal
-print("RESTO es la cola que no tiene ruido = ", resto)
+print("Cociente = ", cociente)
+print("Resto = ", resto)
 
 
     # De la lista leída tendremos: "cociente" secuencias de "columnas" elementos y una cola de "resto" elementos
 
-secuencia = ""
+secuencia = []
 secuencias = []
 contador = 0
 
 for i in range(cociente*columnas):
-    secuencia = secuencia + lista[i] #añado el elemento subi de la lista de entrada
+    secuencia.append(lista[i]) #añado el elemento subi de la lista de entrada
     #print(secuencia)
     contador = contador + 1
     
@@ -315,18 +343,20 @@ for i in range(cociente*columnas):
         #he completado una secuencia, la salvo en el vector de secuencias separadas
         secuencias.append(secuencia)
         #print("vuelco")
-        secuencia = ""
+        secuencia = []
         contador = 0
 
 
-cola = ""
+cola = [] #array para que no se pierda si es qario y el numero es mas de una cifra
 
 for i in range((cociente*columnas), tam): #cociente*columnas fue excluido en el bucle previo porque llegaba justo hasta el valor anterior a ese y ahora parto desde ese inclusive y hasta el final para coger todo lo que quede
-    cola = cola + lista[i]
+    cola.append(lista[i])
 
 
-print(secuencias) #El problema es que ahora las secuencias tienen ruido
-#print(cola)
+print("SECUENCIAS DE COLUMNA ELEMENTOS = ")
+print(secuencias)
+print("COLA")
+print(cola)
 
 ###################################### PRÁCTICA 4 ############################################################################################################################################################
 
@@ -350,6 +380,7 @@ print("Cap Correctora es t= ", t)
 #Implementación por Fuerza Bruta
 
 ordenaciones = list(itertools.product(range(base), repeat=columnas)) #Formas de ordenar base elementos en columnas posiciones
+
 #print(ordenaciones)
 
 erroresPatron = []
@@ -359,18 +390,14 @@ for ordenacion in ordenaciones: #recorro c/u de las ordenaciones obtenidas por f
     if testigo == True: #si es <=t sé fijo que la combinación es un error patron
         erroresPatron.append(ordenacion) #y lo guardo
 
-#print(erroresPatron)
+#print("ERRORES PATRON", erroresPatron)
 
 
     #Cálculo de la Matriz De Control H = (-A^T|Id de orden filas de A)
 
 ### INPUT DE MATRIZ A (LA QUE SE NOS PROPORCIONA)
-A = np.array([[1,0,1,0,1,0,1,1,1],
-[1,0,1,0,1,1,0,0,1],
-[1,0,1,1,0,1,1,0,0],
-[0,1,0,1,0,0,1,1,0],
-[0,0,1,1,1,0,0,1,1],
-[1,1,1,1,0,0,0,0,0]])
+A = np.array([[2,3,4,5],
+[6,1,2,3]])
 
 print("FILAS DE A =",A.shape[0])
 print("COLUMNAS DE A =",A.shape[1])
@@ -395,17 +422,17 @@ H = np.concatenate((NATraspuesta, Id), axis=1)
 print("MATRIZ DE CONTROL H= ",H)
 
 
-#Para cada uno de los errores patron que me valen por tener el peso oportuno, calculo su síndrome y meto las dos cosas juntas (clave,valor = eroorPatron,Sindrome) en un tablero imcompleto siendo un diccionario
+#Para cada uno de los errores patron que me valen por tener el peso oportuno, calculo su síndrome y meto las dos cosas juntas, en la misma posicion pero en dos listas
 
-tableroIncompleto = {}
-clave =""
+sindromes = []
+
 
 for errorPatron in erroresPatron: #Recorro las entradas todas
-    #1.los voy metiendo en el diccionario a la vez la clave sea un string para hashearlo   
-    clave = str(errorPatron)
     errorPatron = np.reshape(errorPatron, (len(errorPatron), 1)) #Le cambio las dimensiones para que sea 15*1 y podamos multiplicar por H; porque errorPatron que teniamos guardados eran 1*15
-    tableroIncompleto[clave] = (H.dot(errorPatron))%base #añado al diccionario el errorPatron en forma de string con su correspondiente síndrome calculado  9*1 NO OLVIDAR QUE EL PRODUCTO ES EN EL MODULO INDICADO/CUERPO FINITO
- 
+    sindromes.append((H.dot(errorPatron))%base) #añado a la tabla de sindromes el correspondiente (al error patron en esa posicion) síndrome calculado  9*1 NO OLVIDAR QUE EL PRODUCTO ES EN EL MODULO INDICADO/CUERPO FINITO
+
+print(sindromes)
+
 
 #Construido el tablero incompleto
 
@@ -415,7 +442,7 @@ for errorPatron in erroresPatron: #Recorro las entradas todas
 secuenciaSCorregidas = []
 
 for secuencia in secuencias: #"secuencias" son la lista dato con ruido dividida ya por bloques
-    secSinRuido = algoritmoLider(secuencia, tableroIncompleto, base, H)
+    secSinRuido = algoritmoLider(secuencia, sindromes, erroresPatron, base, H)
     #me vuelve del algoritmo corregida y en string
     secuenciaSCorregidas.append(secSinRuido) #la añado al conjunto de las corregidas
        
@@ -423,10 +450,7 @@ for secuencia in secuencias: #"secuencias" son la lista dato con ruido dividida 
     #AHORA TENEMOS LA LISTA DE ENTRADA PERO YA SIN RUIDO, Y SE LA PASAMOS A LA PARTE DE LA PRACTICA 3 COMO DATO
 
 print(secuenciaSCorregidas) #No contiene la cola
-
-
-
-
+print(cola)
 
 
 
@@ -436,8 +460,12 @@ print(secuenciaSCorregidas) #No contiene la cola
     # Decodificación Lineal
 
 cod_fuente_lista = decodLineal(identidad, secuenciaSCorregidas, filas, columnas) #tengo la secuencia decodificada linealmente sin la cola
-cod_fuente_lista = cod_fuente_lista + cola
-print(cod_fuente_lista)
+
+#Añadimos la cola
+for num in cola:
+    cod_fuente_lista.append(num) #tendriamos el msj decodif linealmente pero manteniendo los dobles, triples... numeros porque cada uno tiene su posicion en la lista (actualemnte es un msj metido en array)
+
+print("MSJ DEC LINEALMENTE = ", cod_fuente_lista)
 
 
     # Calcular la longitud mínima en bloque (para codificar en binario en éste caso)
@@ -454,26 +482,25 @@ long_min = math.ceil(long_min)
 #print(parte_decimal)
 
 #long_min = int(parte_entera+1) #hago un cast a entero porque sino quedaba float
-
 print("Longitud mínima (Entero Superior) = ", long_min)
 
 
 
-    # Troceo la secuencia en bloques de esa long mínima
+    # Troceo el mensaje dec linealmente en bloques/secuencias de esa long mínima (debo usar un array de arrays para no perder los simbolos dobles, triples... quarios vaya)
 
 secsCodFuente = []
-secuenciaLongMin = ""
+secuenciaLongMin = []
 contador = 0
 
-for i in cod_fuente_lista: #caracter a caracter de las secuencias
-    secuenciaLongMin = secuenciaLongMin + i #añado cada caracter
+for i in cod_fuente_lista: #caracter a caracter del mensaje + cola (string) vamos cogiendo hasta completar r términos
+    secuenciaLongMin.append(i) #añado cada caracter
     contador = contador + 1
     
     if contador == long_min:
         #he completado una secuencia, la salvo en el vector de secuencias separadas
         secsCodFuente.append(secuenciaLongMin)
-        print("vuelco")
-        secuenciaLongMin = ""
+        #print("vuelco")
+        secuenciaLongMin = []
         contador = 0
 
 
@@ -481,6 +508,9 @@ print(secsCodFuente)
 
     # CICLO - Repetir tantas veces como secuencias de long mínima haya en nuestra secsCodFuente. Es decir, como marque la longitud
 mensaje = ""
+
+print()
+print("PROCESO DE DECODIFICACION DE LA FUENTE:")
 
 for secuencia in secsCodFuente: #recorro cada secuencia de long mínima del array
     mensaje = mensaje + decodFuente(secuencia, alfabeto, base)
